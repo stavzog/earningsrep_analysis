@@ -1,10 +1,11 @@
 # Project Roadmap
 
-This roadmap turns the current pitch deck and [`HANDOFF.md`](HANDOFF.md) into
-trackable work. GitHub Issues are the source of truth for assignments,
-discussion, and completion; update the issue links and statuses here as work
-moves forward. Follow [`AI_ASSISTED_PROJECT_WORKFLOW.md`](AI_ASSISTED_PROJECT_WORKFLOW.md)
-for issue templates, agent use, pull requests, and review.
+This is a suggested path through the project, not a gated plan. The team can
+reorder, combine, or replace actions as the work evolves. GitHub Issues are the
+record of specific work and decisions; update issue links and this roadmap as
+the plan changes. Follow
+[`AI_ASSISTED_PROJECT_WORKFLOW.md`](AI_ASSISTED_PROJECT_WORKFLOW.md) for issue
+templates, agent use, pull requests, and review.
 
 ## Agreed project direction
 
@@ -23,28 +24,61 @@ for issue templates, agent use, pull requests, and review.
 - **Chronological split:** Train 2015–2022, validate 2023, and test 2024–2025.
 - **Primary evaluation metric:** Directional accuracy on the held-out test set.
 
-These choices are also recorded in `HANDOFF.md`. Do not implement unresolved
-details by guessing; settle them with the team and update the handoff first.
+These choices are also recorded in `HANDOFF.md`. Some details remain open; they
+do not prevent independent exploration or data loading. Use the action and
+amendment workflow below when an open decision affects the work at hand.
 
-## Roadmap and tracking
+## Action and amendment workflow
 
-Statuses: **In progress** = being scoped or decided; **Blocked** = depends on an
-earlier decision or deliverable; **Not started** = ready after dependencies.
-Issue numbers and PRs should be added when the team creates them.
+- **Choose an action:** Pick the next useful, scoped task from this roadmap or
+  another team priority. The roadmap's order is a suggestion, not a dependency
+  rule.
+- **Start with what is known:** Create or update the relevant GitHub Issue with
+  the goal, expected result, current assumptions, and questions that may arise.
+  Proceed on work that does not require those answers.
+- **Propose an amendment when needed:** If new evidence or an unresolved choice
+  changes the scope or method, document the question, evidence, options, and a
+  recommendation in the issue. Pause only the affected decision, not unrelated
+  work.
+- **Record the team decision:** Once discussed, update the issue and, for a
+  project-wide decision, `HANDOFF.md`. Amend the task plan and continue.
+- **Close the loop:** In the PR, summarize the action taken, amendments accepted
+  or rejected, checks run, and any remaining questions.
 
-| Order | Work item | Type | Depends on | Status | GitHub issue |
-| --- | --- | --- | --- | --- | --- |
-| 0 | Record agreed methodology and outstanding decisions in `HANDOFF.md` | Chore | — | In progress; documentation PR pending | [#5](https://github.com/stavzog/earningsrep_analysis/issues/5) |
-| 1 | Build transcript and price loading plus event-day alignment and RSP labels | Feature | 0 | Blocked | — |
-| 2 | Split calls into sections and extract/cache FinBERT chunk features | Feature | 0 | Blocked | — |
-| 3 | Build the 16-input call records, four-call sequences, and date-based splits | Feature | 1, 2 | Blocked | — |
-| 4 | Implement and evaluate the agreed baseline models | Experiment | 3 | Blocked | — |
-| 5 | Train and compare FFN-A, FFN-B, and the GRU | Experiment | 4 | Blocked | — |
-| 6 | Run the held-out test evaluation and summarize findings and limitations | Experiment | 5 | Blocked | — |
+## Suggested roadmap
 
-## Decisions to settle before implementation
+| Suggested order | Action | Type | Tracking |
+| --- | --- | --- | --- |
+| Current | Keep the handoff aligned with the pitch deck and maintain this roadmap | Chore | [Issue #5](https://github.com/stavzog/earningsrep_analysis/issues/5) · [PR #6](https://github.com/stavzog/earningsrep_analysis/pull/6) |
+| Next | Load and inspect transcript, company-price, and RSP data | Feature | Create an issue when ready |
+| Later | Explore and implement call-to-trading-day alignment and stock-versus-RSP labels | Feature / experiment | Scope as evidence and decisions emerge |
+| Later | Parse call sections and extract/cache FinBERT chunk scores | Feature | Scope from data inspection |
+| Later | Assemble model inputs and chronological train/validation/test examples | Feature | Refine as feature choices are amended |
+| Later | Run the deck's baseline and neural-model comparisons | Experiment | Agree on exact configurations in the relevant issues |
+| Later | Evaluate the held-out test set and report findings and limitations | Experiment | Update based on results |
 
-Record each answer in `HANDOFF.md` and the relevant GitHub issue.
+### Next action: load and inspect the data
+
+The data-loading stage can begin without settling every label or feature
+question. A useful first issue could cover:
+
+1. Load the transcript dataset and inspect its schema, date coverage, empty
+   records, duplicate calls, and availability of call times and speaker
+   segments.
+2. Download adjusted daily price history for a small sample of company tickers
+   and `RSP`; inspect ticker mapping, date coverage, missing prices, and
+   download failures.
+3. Keep downloaded data and caches in ignored local data directories. Do not
+   commit raw or processed datasets.
+4. Produce a concise data inventory and document the exact load commands,
+   configuration, and any coverage limitations so the team can decide the next
+   action from observed evidence.
+
+## Open questions to resolve along the way
+
+These questions are reminders for the action/amendment workflow, not
+prerequisites for starting unrelated work. Record an answer in the relevant
+issue and update `HANDOFF.md` when it becomes a project-wide decision.
 
 - **Event timing:** confirm the transcript timezone; decide whether to exclude
   calls from 09:30–16:00 ET; define handling for calls exactly at 09:30 or
@@ -61,13 +95,13 @@ Record each answer in `HANDOFF.md` and the relevant GitHub issue.
 - **Evaluation:** confirm which model comparisons define success and whether
   secondary metrics or uncertainty estimates are required.
 
-## Issue and pull-request rules
+## Issue and pull-request practices
 
 - Create scoped GitHub Issues from the feature, experiment, or chore template.
   Each issue needs a goal, plan, out-of-scope statement, and a concrete
   definition of done (or a hypothesis and results plan for an experiment).
-- Work on one issue per branch and PR. Link the PR with `Closes #<issue-number>`.
+- Keep each issue and PR reviewable. Link the PR with `Closes #<issue-number>`.
 - Review and understand the changes yourself; request a teammate to review.
   The PR author must not approve their own PR.
 - Record what was built, how it was checked, and the AI tools used in the issue
-  and PR. Update this roadmap's status and links after the issue is completed.
+  and PR. Update this roadmap's suggestions and links as the team's plan changes.
