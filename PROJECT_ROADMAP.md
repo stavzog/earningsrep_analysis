@@ -49,7 +49,7 @@ amendment workflow below when an open decision affects the work at hand.
 
 | Suggested order | Action | Type | Tracking |
 | --- | --- | --- | --- |
-| Current | Keep the handoff aligned with the pitch deck and maintain this roadmap | Chore | [Issue #5](https://github.com/stavzog/earningsrep_analysis/issues/5) · [PR #6](https://github.com/stavzog/earningsrep_analysis/pull/6) |
+| Current | Keep the handoff aligned with the pitch deck and maintain this roadmap | Chore | [Issue #5](https://github.com/stavzog/earningsrep_analysis/issues/5) · [PR #7](https://github.com/stavzog/earningsrep_analysis/pull/7) |
 | Next | Load and inspect transcript, company-price, and RSP data | Feature | Create an issue when ready |
 | Later | Explore and implement call-to-trading-day alignment and stock-versus-RSP labels | Feature / experiment | Scope as evidence and decisions emerge |
 | Later | Parse call sections and extract/cache FinBERT chunk scores | Feature | Scope from data inspection |
