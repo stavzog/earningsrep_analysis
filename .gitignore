@@ -218,3 +218,19 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Project-local datasets and generated ML artifacts
+/data/raw/
+/data/interim/
+/data/processed/
+/outputs/
+/artifacts/
+/checkpoints/
+/models/
+/mlruns/
+/wandb/
+
+# Local environment overrides and secrets
+.env.*
+!.env.example
+!.env.template
