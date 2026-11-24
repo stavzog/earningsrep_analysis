@@ -1,0 +1,2 @@
+# Share the machine-local raw datasets with Delta's managed checkouts.
+data/raw

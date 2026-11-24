@@ -220,7 +220,8 @@ __marimo__/
 .streamlit/secrets.toml
 
 # Project-local datasets and generated ML artifacts
-/data/raw/
+# No trailing slash: Delta may expose this directory as a symlink via .agents/linked.
+/data/raw
 /data/interim/
 /data/processed/
 /outputs/
