@@ -15,3 +15,20 @@ The script saves transcripts and adjusted prices under the Git-ignored
 `data/raw/` directory. It requests prices from 2013-12-01 up to (but not
 including) 2025-06-01 and includes `RSP`; change the date constants in the
 script if needed. It does not clean or label the data.
+
+## Prepare and validate event labels
+
+Install the exchange-calendar dependency, then run the preparation and
+validation scripts from the project root:
+
+```sh
+python -m pip install exchange-calendars
+python scripts/prepare_event_labels.py
+python scripts/validate_event_labels.py
+```
+
+The preparation script writes a complete audit to
+`data/interim/event_labels_audit.parquet` and eligible labels to
+`data/processed/eligible_event_labels.parquet`. Both locations are Git-ignored.
+The validation script checks calendar alignment, return calculations, labels,
+and representative samples.
