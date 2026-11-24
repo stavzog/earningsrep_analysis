@@ -71,6 +71,7 @@ Use the first relevant trading session after the call:
 
 1. Remove empty or very short transcripts (some `content` values have length 0). Remove duplicates on (symbol, date).
 2. Ticker cleanup for yfinance: e.g. `BRK.B → BRK-B`, `BF.B → BF-B`, renamed tickers (`FB → META`, etc.). Record which tickers fail to download. Survivorship bias is a **known limitation**, since delisted companies are often missing from yfinance.
+   Snapshot-specific findings and exclusions are recorded in [`DATA_INVENTORY.md`](DATA_INVENTORY.md).
 3. **Split each call into 3 sections** using `structured_content`:
    - **Prepared remarks:** management segments before the Q&A starts
    - **Analyst questions:** analyst segments during the Q&A
