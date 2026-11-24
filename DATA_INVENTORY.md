@@ -32,12 +32,49 @@ python scripts/inspect_raw_data.py
 - Every transcript symbol has a price-file column.
 - 92 ticker columns have no close-price data.
 
+## Event labels
+
+Run from the project root:
+
+```sh
+python scripts/prepare_event_labels.py
+python scripts/validate_event_labels.py
+```
+
+The validation script successfully checked all 21,135 candidate events.
+
+### Final counts
+
+| Result | Count |
+| --- | ---: |
+| Candidate events from 2015 through 2025 | 21,135 |
+| Eligible events | 12,577 |
+| Excluded events | 8,558 |
+| Eligible `UP` labels | 6,366 |
+| Eligible `DOWN` labels | 6,211 |
+
+| Split | Eligible | `UP` | `DOWN` |
+| --- | ---: | ---: | ---: |
+| Train, 2015–2022 | 9,293 | 4,706 | 4,587 |
+| Validation, 2023 | 1,262 | 647 | 615 |
+| Test, 2024–2025 | 2,022 | 1,013 | 1,009 |
+
 ## Exclusions
 
-| Reason | Affected data | Handling |
+Each excluded event has one primary reason. `missing_stock_price_history` takes
+priority over `during_market_hours` when both apply, so these counts should not
+be read as independent timing totals.
+
+| Reason | Events | Meaning |
 | --- | ---: | --- |
-| `missing_stock_price_history` | 92 tickers | Exclude their events without retrying or remapping the tickers. Record affected ticker and event counts in the label audit output. |
-| `blank_transcript` | 1 transcript | Exclude the transcript and record the reason in the relevant audit output. |
+| `during_market_hours` | 6,632 | The call began at or after the session open and before the actual session close. |
+| `missing_stock_price_history` | 1,827 | The ticker is one of the 92 columns with no close-price data anywhere in the raw price snapshot. Its events are excluded without retrying or remapping the ticker. |
+| `missing_stock_previous_close` | 98 | A partially covered ticker lacks prices for the required event interval. In the current output, all 98 events lack both the previous-session and event-session closes. Renaming this reason to `missing_stock_prices_for_event_interval` is deferred. |
+| `blank_transcript` | 1 | The transcript content is null, empty, or whitespace-only. |
+| `missing_stock_event_close` | 0 | The stock has a previous-session close but no event-session close. |
+| `missing_rsp_previous_close` | 0 | RSP has no close for the previous trading session. |
+| `missing_rsp_event_close` | 0 | RSP has no close for the event trading session. |
+| `nonpositive_price` | 0 | At least one required stock or RSP close is zero or negative. |
 
 ### Tickers without close-price data
 

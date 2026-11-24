@@ -47,23 +47,38 @@ ds = load_dataset("kurry/sp500_earnings_transcripts")["train"]
 
 ## 3. Target / label
 
-The target follows the pitch deck: compare the company's return with the equal-weight S&P 500 benchmark (`RSP`) on the event trading day. The classification is whether the stock return is higher or lower than the benchmark return. The exact return calculation and treatment of ties are **[OPEN]**.
+Compare the company's adjusted close-to-close return with the equal-weight S&P
+500 benchmark (`RSP`) over the same event interval:
+
+```text
+stock return = stock adjusted close on event day
+               / stock adjusted close on previous trading day - 1
+relative return = stock return - RSP return
+```
+
+Label the event `UP` when the relative return is zero or positive and `DOWN`
+when it is negative. A tie counts as `UP`.
 
 ### 3.1 Event trading day and call timing
 
-Use the first relevant trading session after the call:
-- Call **before 09:30 ET** → event day is that same trading date.
-- Call **after 16:00 ET** → event day is the next trading date.
-- Calls **from 09:30 through 16:00 ET** occur during the trading day. **[OPEN]** The team is considering excluding these calls; do not include or discard them until this is decided.
-- Calls on weekends or market holidays map to the next trading date, subject to the timing rule above.
+Treat transcript timestamps as Eastern Time. Use the actual XNYS exchange
+calendar, including holidays and early closes:
 
-**[VERIFY]** Confirm the transcript `date` timezone before applying these rules. Also decide how calls timestamped exactly at 09:30 or 16:00, or with missing/ambiguous times, should be handled.
+- A call before the session open maps to that same session.
+- A call at or after the session open and before the actual session close is
+  excluded.
+- A call at or after the actual session close maps to the next session.
+- A call on a weekend or market holiday maps to the next session.
+
+This means a call exactly at 09:30 ET is excluded on a regular trading day, and
+a call exactly at the session close maps to the next session.
 
 ### 3.2 Binary target
 
-- `UP` if the stock's event-day return is greater than RSP's event-day return; `DOWN` if it is lower.
-- **[OPEN]** Define the return convention (including adjusted-price fields) and the rule for equal returns.
-- Keep the continuous stock and benchmark returns, and their difference, in the label data so labels can be audited.
+- `UP` if the relative return is zero or positive; `DOWN` if it is negative.
+- Use adjusted stock and RSP close prices for the event session and immediately
+  preceding exchange session.
+- Keep both prices, both returns, and their difference in the label audit data.
 
 ---
 
