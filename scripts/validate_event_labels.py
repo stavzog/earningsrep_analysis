@@ -17,6 +17,8 @@ SAMPLE_SIZE = 2
 SAMPLE_COLUMNS = [
     "event_id",
     "call_timestamp_et",
+    "call_time_used_et",
+    "call_time_source",
     "call_timing",
     "event_date",
     "previous_trading_date",
@@ -39,10 +41,16 @@ def require(condition, message):
 
 def validate_row(row, calendar):
     event_id = row["event_id"]
-    call_time = row["call_timestamp_et"]
-    call_date = call_time.tz_localize(None).normalize()
+    call_time = row["call_time_used_et"]
     event_date = row["event_date"]
     timing = row["call_timing"]
+
+    if timing == "suspicious_timestamp":
+        require(pd.isna(call_time), f"{event_id}: should have no call time")
+        require(pd.isna(event_date), f"{event_id}: should have no event date")
+        return
+
+    call_date = call_time.tz_localize(None).normalize()
 
     if timing == "non_trading_day":
         require(not calendar.is_session(call_date), f"{event_id}: bad timing")
@@ -163,7 +171,9 @@ def main():
     early_close_rows = []
     boundary_rows = []
     for index, row in audit.iterrows():
-        call_time = row["call_timestamp_et"]
+        call_time = row["call_time_used_et"]
+        if pd.isna(call_time):
+            continue
         call_date = call_time.tz_localize(None).normalize()
         if not calendar.is_session(call_date):
             continue

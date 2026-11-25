@@ -1,6 +1,6 @@
-"""Download yfinance EPS history for every ticker with an eligible event."""
+"""Download yfinance EPS history for every transcript ticker."""
 
-# Run after prepare_event_labels.py:
+# Run after download_raw_data.py and before prepare_event_labels.py:
 # python -m pip install pandas pyarrow yfinance lxml
 # python scripts/download_eps.py
 
@@ -12,7 +12,7 @@ import yfinance as yf
 
 
 ROOT = Path(__file__).resolve().parents[1]
-ELIGIBLE_PATH = ROOT / "data/processed/eligible_event_labels.parquet"
+TRANSCRIPT_PATH = ROOT / "data/raw/transcripts/transcripts_raw.parquet"
 EPS_PATH = ROOT / "data/raw/eps/eps_yfinance.parquet"
 FAILED_PATH = ROOT / "data/raw/eps/eps_failed_tickers.csv"
 
@@ -24,7 +24,7 @@ ATTEMPTS = 3
 
 def main():
     symbols = sorted(
-        pd.read_parquet(ELIGIBLE_PATH, columns=["symbol"])["symbol"].unique()
+        pd.read_parquet(TRANSCRIPT_PATH, columns=["symbol"])["symbol"].unique()
     )
     frames = []
     failures = []

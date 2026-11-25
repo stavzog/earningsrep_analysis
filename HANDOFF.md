@@ -21,7 +21,7 @@ Expected outcome: direction is hard to predict because markets are efficient. A 
 | Earnings call transcripts | Hugging Face `kurry/sp500_earnings_transcripts` | 33,362 rows, 685 companies, 2005-10 to 2025-05, Parquet, ~1.8 GB, single `train` split |
 | Daily stock prices | `yfinance` | Use adjusted prices (`auto_adjust=True`) so splits and dividends don't create fake returns |
 | Market benchmark | `yfinance` ticker `RSP` (equal-weight S&P 500 ETF) | Compare the stock return with RSP's return |
-| EPS actual vs. estimate | `yfinance` `Ticker.get_earnings_dates(limit=...)` → `EPS Estimate`, `Reported EPS`, `Surprise(%)` | `limit=100` reaches back to the early 2000s; 96.7% of eligible events match an EPS row (see [`DATA_INVENTORY.md`](DATA_INVENTORY.md#eps-coverage)) |
+| EPS actual vs. estimate | `yfinance` `Ticker.get_earnings_dates(limit=...)` → `EPS Estimate`, `Reported EPS`, `Surprise(%)` | `limit=100` reaches back to the early 2000s; 98.1% of eligible events match an EPS row (see [`DATA_INVENTORY.md`](DATA_INVENTORY.md#eps-coverage)) |
 | Sentiment model | Hugging Face `ProsusAI/finbert` | Pre-trained and frozen; use chunk-level positive/negative/neutral probabilities |
 | Keyword dictionary | Loughran–McDonald Master Dictionary (Notre Dame SRAF) | Positive / Negative / Uncertainty word lists; role in the model comparison is **[OPEN]** |
 
@@ -73,6 +73,12 @@ calendar, including holidays and early closes:
 This means a call exactly at 09:30 ET is excluded on a regular trading day, and
 a call exactly at the session close maps to the next session.
 
+Some transcript timestamps are not real call times: calls stamped between
+21:00 and 05:59 ET, or on a weekend or market holiday (often a publication
+date). For these, use the nearest yfinance earnings release time for the same
+ticker within 7 days, then apply the rules above. If no release time is found,
+exclude the event as `suspicious_call_timestamp`.
+
 ### 3.2 Binary target
 
 - `UP` if the relative return is zero or positive; `DOWN` if it is negative.
@@ -110,7 +116,7 @@ a call exactly at the session close maps to the next session.
 ### 5.2 Earnings surprise and call-to-call change
 
 - Include EPS as the 16th current-call input, as specified in the deck. The source is yfinance earnings history (`EPS Estimate`, `Reported EPS`, `Surprise(%)`).
-- **[OPEN]** Decide which EPS representation is used and how missing values are handled.
+- Use yfinance `Surprise(%)`, capped at ±100%. When EPS is missing, set the surprise to 0 (met expectations) and record that it was filled.
 - The project tests whether a change in tone adds information. The deck's FFN-B adds one input for the change in management tone versus the previous call. **[OPEN]** Define which feature represents management tone for this input.
 
 ### 5.3 Sequence construction

@@ -1,6 +1,6 @@
 """Match yfinance EPS rows to eligible events and report coverage."""
 
-# Run after download_eps.py:
+# Run after prepare_event_labels.py:
 # python scripts/match_eps_to_events.py
 
 from pathlib import Path
@@ -26,6 +26,10 @@ EPS_COLUMNS = {
 }
 FIELDS = ["eps_estimate", "reported_eps", "surprise_pct"]
 
+# Model input: surprise %, capped so near-zero estimates cannot produce extreme
+# values. Missing surprise is set to 0 (results met expectations).
+SURPRISE_CAP = 100
+
 
 def to_et_date(timestamps):
     timestamps = pd.to_datetime(timestamps)
@@ -46,9 +50,9 @@ def split_name(year):
 def main():
     events = pd.read_parquet(
         ELIGIBLE_PATH,
-        columns=["event_id", "symbol", "call_timestamp_et"],
+        columns=["event_id", "symbol", "call_time_used_et"],
     )
-    events["call_date"] = to_et_date(events["call_timestamp_et"])
+    events["call_date"] = to_et_date(events["call_time_used_et"])
     events["year"] = events["call_date"].dt.year
     events["split"] = events["year"].map(split_name)
 
@@ -90,6 +94,11 @@ def main():
         "no_eps_history_for_ticker"
     )
 
+    result["eps_surprise_missing"] = result["surprise_pct"].isna()
+    result["eps_surprise_feature"] = (
+        result["surprise_pct"].clip(-SURPRISE_CAP, SURPRISE_CAP).fillna(0)
+    )
+
     OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
     result.drop(columns=["call_date"]).to_parquet(OUTPUT_PATH, index=False)
 
@@ -111,6 +120,12 @@ def main():
     print(coverage.groupby(result["split"]).mean().round(3).to_string())
     print("\nShare of eligible events with each field, by year:")
     print(coverage.groupby(result["year"]).mean().round(3).to_string())
+    capped = result["surprise_pct"].abs() > SURPRISE_CAP
+    print(f"\nSurprise values capped at +/-{SURPRISE_CAP}%: {capped.sum()}")
+    print(
+        "Missing surprise set to 0: "
+        f"{result['eps_surprise_missing'].sum()}"
+    )
     print(f"\nSaved matched EPS data to {OUTPUT_PATH}")
 
 

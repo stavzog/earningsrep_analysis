@@ -30,51 +30,74 @@ python scripts/inspect_raw_data.py
 - Ticker columns: 686
 - `RSP` is present.
 - Every transcript symbol has a price-file column.
-- 92 ticker columns have no close-price data.
+- 92 ticker columns had no close-price data in the original snapshot; 91 in the 2026-11-25 rebuild, which recovered `SHW`.
 
 ## Event labels
 
-Run from the project root:
+Run from the project root (see `README.md` for the full order):
 
 ```sh
+python scripts/download_eps.py
 python scripts/prepare_event_labels.py
 python scripts/validate_event_labels.py
 ```
 
 The validation script successfully checked all 21,135 candidate events.
 
+These counts come from a rebuild of the raw data on 2026-11-25. That price
+download recovered `SHW`, and Yahoo returned negative prices for one `PARA`
+event, which `nonpositive_price` excluded.
+
+### Timestamp corrections
+
+Some transcript timestamps are not real call times. For example, `ABT` calls
+are stamped around 23:00 while Yahoo dates the release 07:00 the next morning,
+and weekend timestamps are usually publication dates after a weekday call.
+Calls stamped 21:00–05:59 ET or on a non-trading day use the nearest Yahoo
+earnings release time for the same ticker within 7 days instead.
+
+| Call time source | Candidate events |
+| --- | ---: |
+| Transcript timestamp | 20,302 |
+| Yahoo earnings release time | 651 |
+| None found (excluded or already excluded) | 182 |
+
+Of the 651 corrected events, 598 are eligible.
+
 ### Final counts
 
 | Result | Count |
 | --- | ---: |
 | Candidate events from 2015 through 2025 | 21,135 |
-| Eligible events | 12,577 |
-| Excluded events | 8,558 |
-| Eligible `UP` labels | 6,366 |
-| Eligible `DOWN` labels | 6,211 |
+| Eligible events | 12,539 |
+| Excluded events | 8,596 |
+| Eligible `UP` labels | 6,357 |
+| Eligible `DOWN` labels | 6,182 |
 
 | Split | Eligible | `UP` | `DOWN` |
 | --- | ---: | ---: | ---: |
-| Train, 2015–2022 | 9,293 | 4,706 | 4,587 |
-| Validation, 2023 | 1,262 | 647 | 615 |
-| Test, 2024–2025 | 2,022 | 1,013 | 1,009 |
+| Train, 2015–2022 | 9,261 | 4,699 | 4,562 |
+| Validation, 2023 | 1,258 | 645 | 613 |
+| Test, 2024–2025 | 2,020 | 1,013 | 1,007 |
 
 ## Exclusions
 
-Each excluded event has one primary reason. `missing_stock_price_history` takes
-priority over `during_market_hours` when both apply, so these counts should not
-be read as independent timing totals.
+Each excluded event has one primary reason, checked in the order listed in
+`prepare_event_labels.py`. `missing_stock_price_history` takes priority over
+timing reasons, so these counts should not be read as independent timing
+totals.
 
 | Reason | Events | Meaning |
 | --- | ---: | --- |
-| `during_market_hours` | 6,632 | The call began at or after the session open and before the actual session close. |
-| `missing_stock_price_history` | 1,827 | The ticker is one of the 92 columns with no close-price data anywhere in the raw price snapshot. Its events are excluded without retrying or remapping the ticker. |
-| `missing_stock_previous_close` | 98 | A partially covered ticker lacks prices for the required event interval. In the current output, all 98 events lack both the previous-session and event-session closes. Renaming this reason to `missing_stock_prices_for_event_interval` is deferred. |
+| `during_market_hours` | 6,673 | The call began at or after the session open and before the actual session close. |
+| `missing_stock_price_history` | 1,786 | The ticker has no close-price data anywhere in the raw price snapshot (list below). Its events are excluded without retrying or remapping the ticker. |
+| `missing_stock_previous_close` | 98 | A partially covered ticker lacks prices for the required event interval. All 98 events lack both the previous-session and event-session closes. Renaming this reason to `missing_stock_prices_for_event_interval` is deferred. |
+| `suspicious_call_timestamp` | 37 | The transcript time is implausible and no Yahoo release time was found within 7 days. |
 | `blank_transcript` | 1 | The transcript content is null, empty, or whitespace-only. |
+| `nonpositive_price` | 1 | At least one required stock or RSP close is zero or negative. |
 | `missing_stock_event_close` | 0 | The stock has a previous-session close but no event-session close. |
 | `missing_rsp_previous_close` | 0 | RSP has no close for the previous trading session. |
 | `missing_rsp_event_close` | 0 | RSP has no close for the event trading session. |
-| `nonpositive_price` | 0 | At least one required stock or RSP close is zero or negative. |
 
 ### Tickers without close-price data
 
@@ -85,56 +108,46 @@ be read as independent timing totals.
 `HES`, `HFC`, `HOLX`, `IAC`, `IGT`, `IPG`, `JNPR`, `JWN`, `K`, `KSU`,
 `KVUE`, `LEG`, `LIFE`, `LM`, `LSI`, `MDP`, `MMC`, `MNK`, `MRO`, `MXIM`,
 `NBL`, `NLSN`, `ODP`, `PBCT`, `PDCO`, `PLL`, `POM`, `PXD`, `QEP`, `QRVO`,
-`RRD`, `SAF`, `SEE`, `SHW`, `SIVB`, `SNV`, `SRCL`, `TGNA`, `TIF`, `TSS`,
+`RRD`, `SAF`, `SEE`, `SIVB`, `SNV`, `SRCL`, `TGNA`, `TIF`, `TSS`,
 `TWTR`, `VAR`, `VIAB`, `WBA`, `WBD`, `WCG`, `WPX`, `WRK`, `WYND`, `X`,
 `XEC`, `XLNX`
 
 ## EPS coverage
-
-Run from the project root after preparing event labels:
 
 ```sh
 python scripts/download_eps.py
 python scripts/match_eps_to_events.py
 ```
 
-These counts come from a rebuild of the raw data on 2026-11-25. That price
-download recovered `SHW` (2 more eligible events), and Yahoo returned negative
-prices for one `PARA` event, which `nonpositive_price` excluded. The rebuild
-has 12,578 eligible events instead of 12,577.
-
-- Tickers requested: 523. All returned EPS rows (46,069 rows in total).
+- Tickers requested: all 685 transcript tickers. 634 returned EPS rows
+  (54,872 rows); 51 returned none, almost all delisted.
 - `limit=100` reaches back to the early 2000s, covering the 2015–2025 study window.
-- Match rule: same ticker, EPS date on the call date or up to 3 days before it.
-  EPS dated after the call is never used.
+- Match rule: same ticker, EPS date on the call date (after any timestamp
+  correction) or up to 3 days before it. EPS dated after the call is never used.
 
-| Match status | Events | Meaning |
+| Match status | Eligible events | Meaning |
 | --- | ---: | --- |
-| `matched` | 12,162 | One EPS row falls inside the window. |
-| `no_eps_row_near_call` | 414 | The ticker has EPS history, but no row falls inside the window. |
+| `matched` | 12,305 | One EPS row falls inside the window. |
+| `no_eps_row_near_call` | 232 | The ticker has EPS history, but no row falls inside the window. |
 | `ambiguous_eps_match` | 2 | Two different rows share the closest date; neither is used. |
-| `no_eps_history_for_ticker` | 0 | yfinance returned no EPS rows for the ticker. |
 
 | Split | Share with estimate | Share with reported EPS | Share with surprise |
 | --- | ---: | ---: | ---: |
-| Train, 2015–2022 | 96.0% | 96.0% | 96.0% |
-| Validation, 2023 | 97.7% | 97.7% | 97.7% |
-| Test, 2024–2025 | 98.6% | 98.6% | 98.5% |
+| Train, 2015–2022 | 97.6% | 97.7% | 97.7% |
+| Validation, 2023 | 98.9% | 98.9% | 98.9% |
+| Test, 2024–2025 | 99.1% | 99.1% | 99.0% |
 
-Yearly coverage ranges from 94.7% (2016) to 99.2% (2025).
+Yearly surprise coverage ranges from 96.6% (2015, 2019) to 99.2% (2025).
 
-### Timestamp findings from unmatched events
+### EPS model input
 
-- 105 unmatched events have an EPS row dated the day after the call, mostly
-  `ROST`, `ABT`, and `ADI`. Their transcript times look shifted; for example,
-  an `ABT` call is timestamped 22:45 while Yahoo dates the release 07:00 the
-  next morning.
-- About 50 unmatched events have an EPS row 4 days earlier; these calls carry
-  weekend timestamps, which suggests a publication date rather than the call
-  date.
+`eps_surprise_feature` is yfinance `Surprise(%)` capped at ±100%, with missing
+values set to 0 (met expectations). `eps_surprise_missing` records which events
+were filled.
 
-Both patterns could also affect event-day assignment in the labels and should
-be reviewed before the matching window or label timing is changed.
+- Surprise values capped: 368 (median surprise is +4.9%; the 1st and 99th
+  percentiles are −88% and +221%).
+- Missing surprise set to 0: 250 eligible events (2.0%).
 
 ## Known limitation
 
