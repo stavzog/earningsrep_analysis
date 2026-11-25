@@ -89,6 +89,53 @@ be read as independent timing totals.
 `TWTR`, `VAR`, `VIAB`, `WBA`, `WBD`, `WCG`, `WPX`, `WRK`, `WYND`, `X`,
 `XEC`, `XLNX`
 
+## EPS coverage
+
+Run from the project root after preparing event labels:
+
+```sh
+python scripts/download_eps.py
+python scripts/match_eps_to_events.py
+```
+
+These counts come from a rebuild of the raw data on 2026-11-25. That price
+download recovered `SHW` (2 more eligible events), and Yahoo returned negative
+prices for one `PARA` event, which `nonpositive_price` excluded. The rebuild
+has 12,578 eligible events instead of 12,577.
+
+- Tickers requested: 523. All returned EPS rows (46,069 rows in total).
+- `limit=100` reaches back to the early 2000s, covering the 2015–2025 study window.
+- Match rule: same ticker, EPS date on the call date or up to 3 days before it.
+  EPS dated after the call is never used.
+
+| Match status | Events | Meaning |
+| --- | ---: | --- |
+| `matched` | 12,162 | One EPS row falls inside the window. |
+| `no_eps_row_near_call` | 414 | The ticker has EPS history, but no row falls inside the window. |
+| `ambiguous_eps_match` | 2 | Two different rows share the closest date; neither is used. |
+| `no_eps_history_for_ticker` | 0 | yfinance returned no EPS rows for the ticker. |
+
+| Split | Share with estimate | Share with reported EPS | Share with surprise |
+| --- | ---: | ---: | ---: |
+| Train, 2015–2022 | 96.0% | 96.0% | 96.0% |
+| Validation, 2023 | 97.7% | 97.7% | 97.7% |
+| Test, 2024–2025 | 98.6% | 98.6% | 98.5% |
+
+Yearly coverage ranges from 94.7% (2016) to 99.2% (2025).
+
+### Timestamp findings from unmatched events
+
+- 105 unmatched events have an EPS row dated the day after the call, mostly
+  `ROST`, `ABT`, and `ADI`. Their transcript times look shifted; for example,
+  an `ABT` call is timestamped 22:45 while Yahoo dates the release 07:00 the
+  next morning.
+- About 50 unmatched events have an EPS row 4 days earlier; these calls carry
+  weekend timestamps, which suggests a publication date rather than the call
+  date.
+
+Both patterns could also affect event-day assignment in the labels and should
+be reviewed before the matching window or label timing is changed.
+
 ## Known limitation
 
 Excluding companies without price history may introduce survivorship bias. The

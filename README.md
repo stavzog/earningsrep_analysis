@@ -32,3 +32,19 @@ The preparation script writes a complete audit to
 `data/processed/eligible_event_labels.parquet`. Both locations are Git-ignored.
 The validation script checks calendar alignment, return calculations, labels,
 and representative samples.
+
+## Download and match EPS data
+
+Run after preparing event labels:
+
+```sh
+python -m pip install yfinance lxml
+python scripts/download_eps.py
+python scripts/match_eps_to_events.py
+```
+
+`download_eps.py` saves yfinance earnings history to `data/raw/eps/`.
+`match_eps_to_events.py` matches each eligible event to the EPS row dated on
+the call date or up to 3 days before it, writes
+`data/interim/event_eps.parquet`, and prints coverage by split and year.
+Missing values are kept as nulls with an `eps_match_status` reason.

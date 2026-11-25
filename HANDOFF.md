@@ -21,7 +21,7 @@ Expected outcome: direction is hard to predict because markets are efficient. A 
 | Earnings call transcripts | Hugging Face `kurry/sp500_earnings_transcripts` | 33,362 rows, 685 companies, 2005-10 to 2025-05, Parquet, ~1.8 GB, single `train` split |
 | Daily stock prices | `yfinance` | Use adjusted prices (`auto_adjust=True`) so splits and dividends don't create fake returns |
 | Market benchmark | `yfinance` ticker `RSP` (equal-weight S&P 500 ETF) | Compare the stock return with RSP's return |
-| EPS actual vs. estimate | `yfinance` `Ticker.get_earnings_dates(limit=...)` → `EPS Estimate`, `Reported EPS`, `Surprise(%)` | **[VERIFY]** how far back coverage goes per ticker; report the share of missing values |
+| EPS actual vs. estimate | `yfinance` `Ticker.get_earnings_dates(limit=...)` → `EPS Estimate`, `Reported EPS`, `Surprise(%)` | `limit=100` reaches back to the early 2000s; 96.7% of eligible events match an EPS row (see [`DATA_INVENTORY.md`](DATA_INVENTORY.md#eps-coverage)) |
 | Sentiment model | Hugging Face `ProsusAI/finbert` | Pre-trained and frozen; use chunk-level positive/negative/neutral probabilities |
 | Keyword dictionary | Loughran–McDonald Master Dictionary (Notre Dame SRAF) | Positive / Negative / Uncertainty word lists; role in the model comparison is **[OPEN]** |
 
