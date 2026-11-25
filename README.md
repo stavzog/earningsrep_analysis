@@ -16,19 +16,27 @@ The script saves transcripts and adjusted prices under the Git-ignored
 including) 2025-06-01 and includes `RSP`; change the date constants in the
 script if needed. It does not clean or label the data.
 
-## Prepare and validate event labels
+## Prepare labels and EPS features
 
-Install the exchange-calendar dependency, then run the preparation and
-validation scripts from the project root:
+Run from the project root after downloading the raw data:
 
 ```sh
-python -m pip install exchange-calendars
+python -m pip install exchange-calendars yfinance lxml
+python scripts/download_eps.py
 python scripts/prepare_event_labels.py
 python scripts/validate_event_labels.py
+python scripts/match_eps_to_events.py
 ```
 
-The preparation script writes a complete audit to
-`data/interim/event_labels_audit.parquet` and eligible labels to
-`data/processed/eligible_event_labels.parquet`. Both locations are Git-ignored.
-The validation script checks calendar alignment, return calculations, labels,
-and representative samples.
+- `download_eps.py` saves yfinance earnings history for every transcript
+  ticker to `data/raw/eps/`. It runs first because the label script uses Yahoo
+  earnings times to correct implausible transcript timestamps.
+- `prepare_event_labels.py` writes a complete audit to
+  `data/interim/event_labels_audit.parquet` and eligible labels to
+  `data/processed/eligible_event_labels.parquet`.
+- `validate_event_labels.py` checks calendar alignment, return calculations,
+  labels, and representative samples.
+- `match_eps_to_events.py` matches each eligible event to an EPS row and
+  writes the capped surprise feature to `data/interim/event_eps.parquet`.
+
+All outputs are Git-ignored.

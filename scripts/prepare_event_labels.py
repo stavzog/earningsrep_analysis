@@ -1,6 +1,6 @@
 """Create auditable stock-versus-RSP return labels."""
 
-# Run with:
+# Run after download_eps.py:
 # python -m pip install pandas pyarrow exchange-calendars
 # python scripts/prepare_event_labels.py
 
@@ -14,11 +14,17 @@ import pyarrow.parquet as pq
 ROOT = Path(__file__).resolve().parents[1]
 TRANSCRIPT_PATH = ROOT / "data/raw/transcripts/transcripts_raw.parquet"
 PRICE_PATH = ROOT / "data/raw/prices/prices_yfinance_adjusted.parquet"
+EPS_PATH = ROOT / "data/raw/eps/eps_yfinance.parquet"
 AUDIT_PATH = ROOT / "data/interim/event_labels_audit.parquet"
 ELIGIBLE_PATH = ROOT / "data/processed/eligible_event_labels.parquet"
 
 START_YEAR = 2015
 END_YEAR = 2025
+
+# Transcript times in these cases are not real call times (for example a
+# 23:15 call, or a weekend publication date). Replace them with the nearest
+# Yahoo earnings release time for the same ticker within this many days.
+YAHOO_WINDOW_DAYS = 7
 
 
 def find_blank_transcripts(path):
@@ -35,6 +41,38 @@ def find_blank_transcripts(path):
             row_number += 1
 
     return blank_rows
+
+
+def is_suspicious(calendar, call_time):
+    call_date = call_time.tz_localize(None).normalize()
+    late_night = call_time.hour >= 21 or call_time.hour < 6
+    return late_night or not calendar.is_session(call_date)
+
+
+def load_yahoo_times():
+    eps = pd.read_parquet(EPS_PATH, columns=["symbol", "Earnings Date"])
+    times = pd.to_datetime(eps["Earnings Date"]).dt.tz_convert(
+        "America/New_York"
+    )
+    # A midnight time means Yahoo gave a date but no release time.
+    eps = eps.assign(time=times).loc[times.dt.hour != 0]
+    return {
+        symbol: rows["time"].drop_duplicates()
+        for symbol, rows in eps.groupby("symbol")
+    }
+
+
+def find_yahoo_time(yahoo_times, symbol, call_time):
+    times = yahoo_times.get(symbol)
+    if times is None:
+        return None
+
+    gaps = (times - call_time).abs()
+    nearby = gaps.loc[gaps <= pd.Timedelta(days=YAHOO_WINDOW_DAYS)]
+    closest = nearby.loc[nearby == nearby.min()]
+    if len(closest) != 1:
+        return None
+    return times.loc[closest.index[0]]
 
 
 def align_call(calendar, call_time):
@@ -68,6 +106,8 @@ def choose_exclusion(row, has_price_history):
         return "blank_transcript"
     if not has_price_history:
         return "missing_stock_price_history"
+    if row["call_timing"] == "suspicious_timestamp":
+        return "suspicious_call_timestamp"
     if row["call_timing"] == "during_market_hours":
         return "during_market_hours"
     if row["stock_previous_close"] is None:
@@ -116,17 +156,29 @@ def main():
 
     blank_rows = find_blank_transcripts(TRANSCRIPT_PATH)
     calendar = xcals.get_calendar("XNYS")
+    yahoo_times = load_yahoo_times()
     records = []
 
     for index, transcript in transcripts.iterrows():
-        call_time = call_times.loc[index]
-        call_timing, event_date = align_call(calendar, call_time)
+        symbol = str(transcript["symbol"])
+        transcript_time = call_times.loc[index]
+        call_time = transcript_time
+        call_time_source = "transcript"
+        if is_suspicious(calendar, transcript_time):
+            call_time = find_yahoo_time(yahoo_times, symbol, transcript_time)
+            call_time_source = (
+                "yahoo_earnings_date" if call_time is not None else None
+            )
+
+        if call_time is None:
+            call_timing, event_date = "suspicious_timestamp", None
+        else:
+            call_timing, event_date = align_call(calendar, call_time)
         previous_date = (
             calendar.previous_session(event_date)
             if event_date is not None
             else None
         )
-        symbol = str(transcript["symbol"])
 
         row = {
             "event_id": f"{symbol}|{transcript['date']}",
@@ -135,7 +187,9 @@ def main():
             "company_name": transcript["company_name"],
             "fiscal_year": transcript["year"],
             "fiscal_quarter": transcript["quarter"],
-            "call_timestamp_et": call_time,
+            "call_timestamp_et": transcript_time,
+            "call_time_used_et": call_time,
+            "call_time_source": call_time_source,
             "call_timing": call_timing,
             "event_date": event_date,
             "previous_trading_date": previous_date,
@@ -200,6 +254,8 @@ def main():
     print(f"Eligible events: {len(eligible):,}")
     print("\nExclusions:")
     print(audit["exclusion_reason"].dropna().value_counts().to_string())
+    print("\nCall time source:")
+    print(audit["call_time_source"].value_counts(dropna=False).to_string())
     print("\nEligible labels:")
     print(eligible["label"].value_counts().to_string())
     print(f"\nSaved audit data to {AUDIT_PATH}")
